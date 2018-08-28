@@ -1,0 +1,138 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Serverless app to convert text to speech.
+
+  '
+Globals:
+  Function:
+    Environment:
+      Variables:
+        BUCKET_NAME:
+          Ref: BucketName
+        SNS_TOPIC:
+          Ref: SnsTopicName
+        TABLE_NAME:
+          Ref: TableName
+    Timeout: 3
+Outputs:
+  NewPostApi:
+    Description: New Post API
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/
+  NewPostFunction:
+    Description: NewPost Lambda Function ARN
+    Value:
+      Fn::GetAtt:
+      - NewPostFunction
+      - Arn
+Parameters:
+  BucketName:
+    Default: say-it-messages
+    Type: String
+  SnsTopicName:
+    Default: say-it-messages
+    Type: String
+  TableName:
+    Default: say-it-messages
+    Type: String
+Resources:
+  LambdaExecutionRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - logs:CreateLogGroup
+            Effect: Allow
+            Resource:
+              Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+          Version: '2012-10-17'
+        PolicyName: CloudwatchPolicy
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:GetObject
+            Effect: Allow
+            Resource:
+            - Fn::Sub: arn:aws:s3:::${BucketName}/*
+          Version: '2012-10-17'
+        PolicyName: S3Policy
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - dynamodb:Query
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:Scan
+            Effect: Allow
+            Resource:
+            - Fn::GetAtt:
+              - MessagesTable
+              - Arn
+          Version: '2012-10-17'
+        PolicyName: DynamoDBPolicy
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - sns:Publish
+            Effect: Allow
+            Resource:
+            - Ref: MessagesTopic
+          Version: '2012-10-17'
+        PolicyName: SNSPolicy
+      RoleName: lambda-execution
+    Type: AWS::IAM::Role
+  MessagesBucket:
+    Properties:
+      BucketName:
+        Ref: BucketName
+    Type: AWS::S3::Bucket
+  MessagesTable:
+    Properties:
+      AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName:
+        Ref: TableName
+    Type: AWS::DynamoDB::Table
+  MessagesTopic:
+    Properties:
+      TopicName:
+        Ref: SnsTopicName
+    Type: AWS::SNS::Topic
+  NewPostFunction:
+    Properties:
+      CodeUri: s3://say-it-build/592dc62e408b270ef84b390d95d6a66d
+      Events:
+        NewPost:
+          Properties:
+            Method: post
+            Path: /new_post
+          Type: Api
+      FunctionName: say-it-new-post
+      Handler: new_post.handler
+      Role:
+        Fn::GetAtt:
+        - LambdaExecutionRole
+        - Arn
+      Runtime: python3.6
+    Type: AWS::Serverless::Function
+Transform: AWS::Serverless-2016-10-31
