@@ -158,8 +158,8 @@ Resources:
 
 Outputs:
 
-    NewPostApi:
-      Description: 'New Post API'
+    NewMessageApi:
+      Description: 'New Message API'
       Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/'
 
     NewMessageFunction:
