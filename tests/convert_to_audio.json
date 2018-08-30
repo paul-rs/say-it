@@ -1,0 +1,37 @@
+{
+    "Records": [
+        {
+            "eventID": "dbc94a0ba53cad3842fc644c2e5b8b04",
+            "eventName": "INSERT",
+            "eventVersion": "1.1",
+            "eventSource": "aws:dynamodb",
+            "awsRegion": "us-east-1",
+            "dynamodb": {
+                "ApproximateCreationDateTime": 1535637180,
+                "Keys": {
+                    "Id": {
+                        "S": "33ea83b1b884452a88e691cc96a7035c"
+                    }
+                },
+                "NewImage": {
+                    "Status": {
+                        "S": "Queued"
+                    },
+                    "Message": {
+                        "S": "Can you say this Polly?"
+                    },
+                    "Expiration": {
+                        "N": "1535723610.716634273529052734375"
+                    },
+                    "Id": {
+                        "S": "33ea83b1b884452a88e691cc96a7035c"
+                    }
+                },
+                "SequenceNumber": "100000000004786529863",
+                "SizeBytes": 137,
+                "StreamViewType": "NEW_IMAGE"
+            },
+            "eventSourceARN": "arn:aws:dynamodb:us-east-1:540054992609:table/say-it-messages/stream/2018-08-30T13:17:56.342"
+        }
+    ]
+}

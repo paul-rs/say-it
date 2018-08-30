@@ -2,7 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   Serverless app to convert text to speech.
-
 Parameters:
   TableName:
     Type: String
@@ -10,11 +9,10 @@ Parameters:
   BucketName:
     Type: String
     Default: say-it-messages
-  SnsTopicName:
-    Type: String
-    Default: say-it-messages
+  DaysToExpire:
+    Type: Number
+    Default: 1
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 3
@@ -22,14 +20,14 @@ Globals:
       Variables:
         TABLE_NAME: !Ref TableName
         BUCKET_NAME: !Ref BucketName
-        SNS_TOPIC: !Ref SnsTopicName
+        DAYS_TO_EXPIRE: !Ref DaysToExpire
 
 Resources:
 
-  LambdaExecutionRole:
+  NewMessageExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: lambda-execution
+      RoleName: new-message-lambda-execution
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -39,89 +37,124 @@ Resources:
       ManagedPolicyArns:
       - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
       Policies:
-      - PolicyName: CloudwatchPolicy
+      - PolicyName: NewPostLambdaPolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
             - Effect: Allow
               Action:
-                - 'logs:CreateLogGroup'
+                - logs:CreateLogGroup
               Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
-      - PolicyName: S3Policy
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+              Resource:
+                - !GetAtt MessagesTable.Arn
+
+  ConvertFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: convert-lambda-execution
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal: {Service: [lambda.amazonaws.com]}
+          Action: ['sts:AssumeRole']
+      ManagedPolicyArns:
+      - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+      - PolicyName: ConvertLambdaPolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:Query
+              Resource:
+                - !GetAtt MessagesTable.Arn
+            - Effect: Allow
+              Action:
+                - dynamodb:DescribeStream
+                - dynamodb:GetRecords
+                - dynamodb:GetShardIterator
+                - dynamodb:ListStreams
+              Resource:
+                - !GetAtt MessagesTable.StreamArn
+            - Effect: Allow
+              Action:
+                - polly:StartSpeechSynthesisTask
+                - polly:DescribeVoices
+              Resource: [ '*' ]
             - Effect: Allow
               Action:
                 - 's3:PutObject'
-                - 's3:DeleteObject'
-                - 's3:GetObject'
               Resource:
                 - !Sub 'arn:aws:s3:::${BucketName}/*'
-      - PolicyName: DynamoDBPolicy
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - 'dynamodb:Query'
-                - 'dynamodb:PutItem'
-                - 'dynamodb:UpdateItem'
-                - 'dynamodb:Scan'
-              Resource:
-                - !GetAtt MessagesTable.Arn
-      - PolicyName: SNSPolicy
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - 'sns:Publish'
-              Resource:
-                - !Ref MessagesTopic
 
   MessagesTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Ref TableName
       AttributeDefinitions:
-        - AttributeName: id
+        - AttributeName: Id
           AttributeType: S
       KeySchema:
-        - AttributeName: id
+        - AttributeName: Id
           KeyType: HASH
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+      TimeToLiveSpecification:
+        Enabled: true
+        AttributeName: Expiration
   
   MessagesBucket:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: !Ref BucketName
-  
-  MessagesTopic:
-    Type: 'AWS::SNS::Topic'
-    Properties:
-      TopicName: !Ref SnsTopicName
-      # Subscription:
-      #   - Protocol: lambda
-      #     Endpoint: !GetAtt TranscodeAudioFunction.Arn
-      
+      LifecycleConfiguration:
+        Rules:
+          - ExpirationInDays: !Ref DaysToExpire
+            Status: Enabled
 
-  NewPostFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+  NewMessageFunction:
+    Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      FunctionName: say-it-new-post
-      Handler: new_post.handler
+      FunctionName: new-message
+      Handler: new_message.handler
       Runtime: python3.6
-      Role: !GetAtt LambdaExecutionRole.Arn
+      Role: !GetAtt NewMessageExecutionRole.Arn
       Events:
-        NewPost:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+        NewMessage:
+          Type: Api 
           Properties:
-              Path: /new_post
+              Path: /new_message
               Method: post
+  
+  ConvertToAudioFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: app/
+      FunctionName: convert-to-audio
+      Handler: convert_to_audio.handler
+      Runtime: python3.6
+      Role: !GetAtt ConvertFunctionExecutionRole.Arn
+      Events:
+        DDBStream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt MessagesTable.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 100
 
 Outputs:
 
@@ -129,6 +162,6 @@ Outputs:
       Description: 'New Post API'
       Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/'
 
-    NewPostFunction:
-      Description: 'NewPost Lambda Function ARN'
-      Value: !GetAtt NewPostFunction.Arn
+    NewMessageFunction:
+      Description: 'New Message Lambda Function ARN'
+      Value: !GetAtt NewMessageFunction.Arn

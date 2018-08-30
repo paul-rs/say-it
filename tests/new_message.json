@@ -1,6 +1,6 @@
 {
     "httpMethod": "POST",
-    "body": "{ \"text\": \"Can you say this Polly?\"}",
+    "body": "{ \"message\": \"Can you say this Polly?\"}",
     "resource": "/{proxy+}",
     "requestContext": {
         "resourceId": "123456",
