@@ -1,4 +1,5 @@
-# Text to Speech
+## Say it Polly
 
-## Serverless application to convert text to speech 
-## Using Serverless Application Model (SAM) and Polly
+Serverless application to convert text to speech using:
+* Serverless Application Model (SAM) 
+* Polly
