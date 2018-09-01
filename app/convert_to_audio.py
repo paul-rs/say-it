@@ -2,23 +2,16 @@ import boto3
 from boto3.dynamodb.conditions import Key
 from datetime import datetime
 import os
-import random
-from lambda_utils import get_logger
+from utils import get_logger
 
 
 logger = get_logger()
-dynamodb = boto3.resource('dynamodb')
-messages = dynamodb.Table(os.environ['TABLE_NAME'])
+messages = boto3.resource('dynamodb').Table(os.environ['TABLE_NAME'])
 polly = boto3.client('polly')
-all_voices = None
 
 
 def handler(event, context):
     logger.info(f'Received event: {event}')
-    voices = (
-        all_voices or
-        polly.describe_voices(LanguageCode='en-US')['Voices']
-    )
 
     for record in event['Records']:
         if record['eventName'] != 'INSERT':
@@ -35,10 +28,11 @@ def handler(event, context):
             continue
 
         response = polly.start_speech_synthesis_task(
-            OutputFormat='mp3',
+            OutputFormat=message['OutputFormat'],
+            SampleRate=message.get('SampleRate'),
             OutputS3BucketName=os.environ.get('BUCKET_NAME'),
             Text=message['Message'],
-            VoiceId=random.choice(voices)['Id']
+            VoiceId=message['VoiceId']
         )
         logger.info(response)
 
@@ -47,8 +41,7 @@ def handler(event, context):
             for k, v in response.get('SynthesisTask', {}).items()
         }
 
-        message.update(Task=task)
-        message['Status'] = 'Processing'
+        message.update(Task=task, Status='Processing')
         messages.put_item(Item=message)
         logger.info(message)
 

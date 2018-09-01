@@ -70,7 +70,6 @@ Resources:
               - StreamArn
           - Action:
             - polly:StartSpeechSynthesisTask
-            - polly:DescribeVoices
             Effect: Allow
             Resource:
             - '*'
@@ -86,7 +85,7 @@ Resources:
     Type: AWS::IAM::Role
   ConvertToAudioFunction:
     Properties:
-      CodeUri: s3://say-it-build/4a1bd4d5df45535e154594a2624ac6a2
+      CodeUri: s3://say-it-build/680730dd14ac1b34978f9b3fb7aa679a
       Events:
         DDBStream:
           Properties:
@@ -163,6 +162,11 @@ Resources:
             - Fn::GetAtt:
               - MessagesTable
               - Arn
+          - Action:
+            - polly:DescribeVoices
+            Effect: Allow
+            Resource:
+            - '*'
           Version: '2012-10-17'
         PolicyName: NewPostLambdaPolicy
       RoleName:
@@ -170,7 +174,7 @@ Resources:
     Type: AWS::IAM::Role
   NewMessageFunction:
     Properties:
-      CodeUri: s3://say-it-build/4a1bd4d5df45535e154594a2624ac6a2
+      CodeUri: s3://say-it-build/680730dd14ac1b34978f9b3fb7aa679a
       Events:
         NewMessage:
           Properties:

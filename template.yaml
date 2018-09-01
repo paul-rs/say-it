@@ -54,6 +54,10 @@ Resources:
                 - dynamodb:PutItem
               Resource:
                 - !GetAtt MessagesTable.Arn
+            - Effect: Allow
+              Action:
+                - polly:DescribeVoices
+              Resource: [ '*' ]
 
   ConvertFunctionExecutionRole:
     Type: AWS::IAM::Role
@@ -93,7 +97,6 @@ Resources:
             - Effect: Allow
               Action:
                 - polly:StartSpeechSynthesisTask
-                - polly:DescribeVoices
               Resource: [ '*' ]
             - Effect: Allow
               Action:
