@@ -7,7 +7,7 @@ default_content_type = 'application/json'
 def get_logger(level=logging.INFO):
     logger = logging.getLogger()
     logger.setLevel(level)
-    
+
     return logger
 
 

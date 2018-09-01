@@ -14,7 +14,10 @@ all_voices = None
 
 def handler(event, context):
     logger.info(f'Received event: {event}')
-    voices = all_voices or polly.describe_voices(LanguageCode='en-US')['Voices']
+    voices = (
+        all_voices or
+        polly.describe_voices(LanguageCode='en-US')['Voices']
+    )
 
     for record in event['Records']:
         if record['eventName'] != 'INSERT':
@@ -26,17 +29,19 @@ def handler(event, context):
         )['Items']
 
         message = items[0] if items else None
-        message['Status'] = 'Processing'
 
         if not message:
             continue
 
+        message['Status'] = 'Processing'
         logger.info(message)
+
         response = polly.start_speech_synthesis_task(
             OutputFormat='mp3',
             OutputS3BucketName=os.environ.get('BUCKET_NAME'),
             Text=message['Message'],
             VoiceId=random.choice(voices)['Id']
         )
+
         messages.put_item(Item=message)
         logger.info(response)

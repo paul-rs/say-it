@@ -2,7 +2,6 @@ import boto3
 import json
 import os
 import uuid
-from decimal import Decimal
 from time import time
 from lambda_utils import get_logger, create_response
 
@@ -22,11 +21,11 @@ def handler(event, context):
 
     # Create tracking record in DynamoDB
     record = {
-        'Id' : record_id,
-        'Message' : message,
-        'Status' : 'Queued',
+        'Id': record_id,
+        'Message': message,
+        'Status': 'Queued',
         'Expiration': int(time()) + time_to_live
     }
     messages.put_item(Item=record)
-    
+
     return create_response(event.get('headers', {}), record, None)
