@@ -11,7 +11,8 @@ def get_logger(level=logging.INFO):
     return logger
 
 
-def create_response(headers={}, body=None, error=None):
+def create_response(headers=None, body=None, error=None):
+    headers = headers or {}
     return {
         'statusCode': '400' if error else '200',
         'body': error.message if error else json.dumps(body),

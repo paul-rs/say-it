@@ -28,4 +28,4 @@ def handler(event, context):
     }
     messages.put_item(Item=record)
 
-    return create_response(event.get('headers', {}), record, None)
+    return create_response(event.get('headers', {}), record)

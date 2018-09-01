@@ -3,12 +3,17 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   Serverless app to convert text to speech.
 Parameters:
+  StageName:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - int
+      - prod
   TableName:
     Type: String
-    Default: say-it-messages
   BucketName:
     Type: String
-    Default: say-it-messages
   DaysToExpire:
     Type: Number
     Default: 1
@@ -18,16 +23,15 @@ Globals:
     Timeout: 3
     Environment:
       Variables:
-        TABLE_NAME: !Ref TableName
-        BUCKET_NAME: !Ref BucketName
+        TABLE_NAME: !Sub ${StageName}-${TableName}
+        BUCKET_NAME: !Sub ${StageName}-${BucketName}
         DAYS_TO_EXPIRE: !Ref DaysToExpire
 
 Resources:
-
   NewMessageExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: new-message-lambda-execution
+      RoleName: !Sub ${StageName}-new-message-lambda-execution
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -54,7 +58,7 @@ Resources:
   ConvertFunctionExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: convert-lambda-execution
+      RoleName: !Sub ${StageName}-convert-lambda-execution
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -95,12 +99,12 @@ Resources:
               Action:
                 - 's3:PutObject'
               Resource:
-                - !Sub 'arn:aws:s3:::${BucketName}/*'
+                - !Sub 'arn:aws:s3:::${StageName}-${BucketName}/*'
 
   MessagesTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Ref TableName
+      TableName: !Sub ${StageName}-${TableName}
       AttributeDefinitions:
         - AttributeName: Id
           AttributeType: S
@@ -119,7 +123,7 @@ Resources:
   MessagesBucket:
     Type: 'AWS::S3::Bucket'
     Properties:
-      BucketName: !Ref BucketName
+      BucketName: !Sub ${StageName}-${BucketName}
       LifecycleConfiguration:
         Rules:
           - ExpirationInDays: !Ref DaysToExpire
@@ -129,14 +133,17 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      FunctionName: new-message
+      FunctionName: !Sub ${StageName}-new-message
       Handler: new_message.handler
       Runtime: python3.6
       Role: !GetAtt NewMessageExecutionRole.Arn
       Events:
-        NewMessage:
+        NewMessage: 
           Type: Api 
           Properties:
+              # this deploys to an Api under the stack name
+              # SAM support for stages isn't that good yet
+              # TODO: explicit API definition using swagger definition?
               Path: /new_message
               Method: post
   
@@ -144,7 +151,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: app/
-      FunctionName: convert-to-audio
+      FunctionName: !Sub ${StageName}-convert-to-audio
       Handler: convert_to_audio.handler
       Runtime: python3.6
       Role: !GetAtt ConvertFunctionExecutionRole.Arn
@@ -156,12 +163,3 @@ Resources:
             StartingPosition: LATEST
             BatchSize: 100
 
-Outputs:
-
-    NewMessageApi:
-      Description: 'New Message API'
-      Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/'
-
-    NewMessageFunction:
-      Description: 'New Message Lambda Function ARN'
-      Value: !GetAtt NewMessageFunction.Arn
