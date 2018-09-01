@@ -14,8 +14,7 @@ from config import (
 
 
 logger = get_logger()
-dynamodb = boto3.resource('dynamodb')
-messages = dynamodb.Table(os.environ['TABLE_NAME'])
+messages = boto3.resource('dynamodb').Table(os.environ['TABLE_NAME'])
 
 polly = boto3.client('polly')
 valid_voices = None

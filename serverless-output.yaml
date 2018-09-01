@@ -13,6 +13,11 @@ Globals:
         TABLE_NAME:
           Fn::Sub: ${StageName}-${TableName}
     Timeout: 3
+Outputs:
+  NewPostApi:
+    Description: New Post API
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/new_message/
 Parameters:
   BucketName:
     Type: String
@@ -85,7 +90,7 @@ Resources:
     Type: AWS::IAM::Role
   ConvertToAudioFunction:
     Properties:
-      CodeUri: s3://say-it-build/680730dd14ac1b34978f9b3fb7aa679a
+      CodeUri: s3://say-it-build/2b9eebbca859201f4bca6ae70fd851bc
       Events:
         DDBStream:
           Properties:
@@ -174,7 +179,7 @@ Resources:
     Type: AWS::IAM::Role
   NewMessageFunction:
     Properties:
-      CodeUri: s3://say-it-build/680730dd14ac1b34978f9b3fb7aa679a
+      CodeUri: s3://say-it-build/2b9eebbca859201f4bca6ae70fd851bc
       Events:
         NewMessage:
           Properties:
