@@ -72,11 +72,13 @@ def handler(event, context):
     try:
         messages.put_item(Item=record)
     except botocore.exceptions.ClientError as err:
-        error_code = 400
-        error_message = err.response['Error']
         if err.response['Error']['Code'] == max_throughput_error:
             error_code = 429
             error_message = f"Maximum throughput reached. Please retry later."
+        else:
+            error_code = 400
+            error_message = err.response['Error']
+
         return create_response(
             headers, None, error_message, error_code
         )
