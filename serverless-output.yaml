@@ -96,7 +96,7 @@ Resources:
     Type: AWS::IAM::Role
   ConvertToAudioFunction:
     Properties:
-      CodeUri: s3://say-it-build/d2a44cc2dcc91a2adbe0d07d75294c52
+      CodeUri: s3://say-it-build/5b2bd7278cb06dc7f4451210a4ca5da3
       Environment:
         Variables:
           SNS_TOPIC_ARN:
@@ -200,7 +200,7 @@ Resources:
     Type: AWS::IAM::Role
   NewMessageFunction:
     Properties:
-      CodeUri: s3://say-it-build/d2a44cc2dcc91a2adbe0d07d75294c52
+      CodeUri: s3://say-it-build/5b2bd7278cb06dc7f4451210a4ca5da3
       Environment:
         Variables:
           DAYS_TO_EXPIRE:
@@ -222,7 +222,7 @@ Resources:
     Type: AWS::Serverless::Function
   UpdateOutputFunction:
     Properties:
-      CodeUri: s3://say-it-build/d2a44cc2dcc91a2adbe0d07d75294c52
+      CodeUri: s3://say-it-build/5b2bd7278cb06dc7f4451210a4ca5da3
       Events:
         SnsSubscription:
           Properties:

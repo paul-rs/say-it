@@ -23,7 +23,7 @@ def handler(event, context):
 
         message = items[0] if items else None
 
-        if not message:
+        if not message or message['Status'] != 'QUEUED':
             continue
 
         response = polly.start_speech_synthesis_task(
