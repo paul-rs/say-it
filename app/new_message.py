@@ -26,9 +26,9 @@ def handler(event, context):
     request_body = json.loads(event['body'])
 
     record_id = str(uuid.uuid4().hex)
-    message = request_body.get('Message')
-    output_format = request_body.get('OutputFormat') or default_format
-    sample_rate = request_body.get('SampleRate')
+    message = request_body.get('message')
+    output_format = request_body.get('outputFormat') or default_format
+    sample_rate = request_body.get('sampleRate')
 
     if output_format not in supported_formats:
         return create_response(
@@ -52,23 +52,23 @@ def handler(event, context):
         polly.describe_voices(LanguageCode=language_code)['Voices']
     )
 
-    voice_id = request_body.get('VoiceId') or random.choice(voices)['Id']
+    voice_id = request_body.get('voiceId') or random.choice(voices)['Id']
     if voice_id not in [x['Id'] for x in voices]:
         return create_response(
             headers, None,
-            f"Invalid VoiceId '{voice_id}' for LanguageCode '{language_code}'"
+            f"Invalid voiceId '{voice_id}' for LanguageCode '{language_code}'"
         )
 
     # Create tracking record in DynamoDB
     record = {
-        'Id': record_id,
-        'Status': 'QUEUED',
-        'Message': message,
-        'OutputFormat': output_format,
-        'SampleRate': sample_rate,
-        'VoiceId': voice_id,
-        'LanguageCode': language_code,
-        'Expiration': int(time()) + time_to_live
+        'id': record_id,
+        'taskStatus': 'QUEUED',
+        'message': message,
+        'outputFormat': output_format,
+        'sampleRate': sample_rate,
+        'voiceId': voice_id,
+        'languageCode': language_code,
+        'expiration': int(time()) + time_to_live
     }
 
     try:

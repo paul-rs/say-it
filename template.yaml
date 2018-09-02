@@ -85,7 +85,7 @@ Resources:
             - Effect: Allow
               Action:
                 - dynamodb:PutItem
-                - dynamodb:Query
+                - dynamodb:GetItem
               Resource:
                 - !GetAtt MessagesTable.Arn
             - Effect: Allow
@@ -149,10 +149,10 @@ Resources:
     Properties:
       TableName: !Sub ${StageName}-${TableName}
       AttributeDefinitions:
-        - AttributeName: Id
+        - AttributeName: id
           AttributeType: S
       KeySchema:
-        - AttributeName: Id
+        - AttributeName: id
           KeyType: HASH
       ProvisionedThroughput:
         ReadCapacityUnits: 5
@@ -161,7 +161,7 @@ Resources:
         StreamViewType: NEW_IMAGE
       TimeToLiveSpecification:
         Enabled: true
-        AttributeName: Expiration
+        AttributeName: expiration
 
   MessagesBucket:
     Type: 'AWS::S3::Bucket'

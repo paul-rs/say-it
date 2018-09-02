@@ -19,24 +19,21 @@ def handler(event, context):
     object_key = output_uri.path.lstrip('/')
     message_id = object_key.split('.')[0]
 
-    message = ddb.get_item(Key={'Id': message_id})['Item']
-    message['SampleRate'] = task.pop('sampleRate')
-    message['VoiceId'] = task.pop('voiceId')
-    message['OutputUri'] = task.pop('outputUri')
-    message['Status'] = task.pop('taskStatus')
-    message['TaskId'] = task.pop('taskId')
-    message['Task'] = task
-    logger.info(message)
+    message = ddb.get_item(Key={'id': message_id})['Item']
+    attributes = [
+        'sampleRate',
+        'voiceId',
+        'outputUri',
+        'taskStatus',
+        'taskId'
+    ]
+    message.update({a: task.pop(a) for a in attributes})
+    task.pop('outputFormat')
+    message['task'] = task
     ddb.put_item(Item=message)
 
-    logger.info(bucket_name)
-    logger.info(object_key)
     s3_object = s3.Object(bucket_name, object_key)
-    metadata = {
-        'SampleRate': message['SampleRate'],
-        'VoiceId': message['VoiceId'],
-        'TaskId': message['TaskId']
-    }
+    metadata = {a: message[a] for a in ['sampleRate', 'voiceId', 'taskId']}
     s3_object.metadata.update(metadata)
     s3_object.copy_from(
         CopySource={'Bucket': bucket_name, 'Key': object_key},
