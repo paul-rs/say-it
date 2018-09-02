@@ -37,7 +37,10 @@ def handler(event, context):
         )
         logger.info(response)
 
-        message.update(Status='PROCESSING', TaskId=response['TaskId'])
+        message.update(
+            Status='PROCESSING',
+            TaskId=response['SynthesisTask']['TaskId']
+        )
         messages.put_item(Item=message)
         logger.info(message)
 
