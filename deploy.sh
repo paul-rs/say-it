@@ -21,4 +21,5 @@ sam deploy \
    --parameter-overrides \
         StageName=$stage \
         TableName=say-it-messages \
-        BucketName=say-it-messages
+        BucketName=say-it-messages \
+        SnsTopicName=say-it-messages

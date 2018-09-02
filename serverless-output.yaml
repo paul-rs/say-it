@@ -8,10 +8,9 @@ Globals:
       Variables:
         BUCKET_NAME:
           Fn::Sub: ${StageName}-${BucketName}
-        DAYS_TO_EXPIRE:
-          Ref: DaysToExpire
         TABLE_NAME:
           Fn::Sub: ${StageName}-${TableName}
+    MemorySize: 128
     Timeout: 3
 Outputs:
   NewPostApi:
@@ -24,6 +23,8 @@ Parameters:
   DaysToExpire:
     Default: 1
     Type: Number
+  SnsTopicName:
+    Type: String
   StageName:
     AllowedValues:
     - dev
@@ -83,6 +84,11 @@ Resources:
             Effect: Allow
             Resource:
             - Fn::Sub: arn:aws:s3:::${StageName}-${BucketName}/*
+          - Action:
+            - sns:Publish
+            Effect: Allow
+            Resource:
+            - Ref: MessagesTopic
           Version: '2012-10-17'
         PolicyName: ConvertLambdaPolicy
       RoleName:
@@ -90,7 +96,11 @@ Resources:
     Type: AWS::IAM::Role
   ConvertToAudioFunction:
     Properties:
-      CodeUri: s3://say-it-build/2b9eebbca859201f4bca6ae70fd851bc
+      CodeUri: s3://say-it-build/d2a44cc2dcc91a2adbe0d07d75294c52
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN:
+            Ref: MessagesTopic
       Events:
         DDBStream:
           Properties:
@@ -139,6 +149,17 @@ Resources:
         AttributeName: Expiration
         Enabled: true
     Type: AWS::DynamoDB::Table
+  MessagesTopic:
+    Properties:
+      Subscription:
+      - Endpoint:
+          Fn::GetAtt:
+          - UpdateOutputFunction
+          - Arn
+        Protocol: lambda
+      TopicName:
+        Ref: SnsTopicName
+    Type: AWS::SNS::Topic
   NewMessageExecutionRole:
     Properties:
       AssumeRolePolicyDocument:
@@ -179,7 +200,11 @@ Resources:
     Type: AWS::IAM::Role
   NewMessageFunction:
     Properties:
-      CodeUri: s3://say-it-build/2b9eebbca859201f4bca6ae70fd851bc
+      CodeUri: s3://say-it-build/d2a44cc2dcc91a2adbe0d07d75294c52
+      Environment:
+        Variables:
+          DAYS_TO_EXPIRE:
+            Ref: DaysToExpire
       Events:
         NewMessage:
           Properties:
@@ -195,4 +220,62 @@ Resources:
         - Arn
       Runtime: python3.6
     Type: AWS::Serverless::Function
+  UpdateOutputFunction:
+    Properties:
+      CodeUri: s3://say-it-build/d2a44cc2dcc91a2adbe0d07d75294c52
+      Events:
+        SnsSubscription:
+          Properties:
+            Topic:
+              Ref: MessagesTopic
+          Type: SNS
+      FunctionName:
+        Fn::Sub: ${StageName}-update-output
+      Handler: update_output.handler
+      Role:
+        Fn::GetAtt:
+        - UpdateOutputFunctionExecutionRole
+        - Arn
+      Runtime: python3.6
+    Type: AWS::Serverless::Function
+  UpdateOutputFunctionExecutionRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+        Version: '2012-10-17'
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - logs:CreateLogGroup
+            Effect: Allow
+            Resource:
+              Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+          - Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            Effect: Allow
+            Resource:
+            - Fn::GetAtt:
+              - MessagesTable
+              - Arn
+          - Action:
+            - s3:PutObject
+            - s3:GetObject
+            Effect: Allow
+            Resource:
+            - Fn::Sub: arn:aws:s3:::${StageName}-${BucketName}/*
+          Version: '2012-10-17'
+        PolicyName: UpdateOutputLambdaPolicy
+      RoleName:
+        Fn::Sub: ${StageName}-update-output-lambda-execution
+    Type: AWS::IAM::Role
 Transform: AWS::Serverless-2016-10-31

@@ -1,6 +1,5 @@
 import boto3
 from boto3.dynamodb.conditions import Key
-from datetime import datetime
 import os
 from utils import get_logger
 
@@ -29,19 +28,16 @@ def handler(event, context):
 
         response = polly.start_speech_synthesis_task(
             OutputFormat=message['OutputFormat'],
-            SampleRate=message.get('SampleRate'),
-            OutputS3BucketName=os.environ.get('BUCKET_NAME'),
+            SampleRate=message['SampleRate'],
+            OutputS3KeyPrefix=message['Id'],
+            OutputS3BucketName=os.environ['BUCKET_NAME'],
+            SnsTopicArn=os.environ['SNS_TOPIC_ARN'],
             Text=message['Message'],
             VoiceId=message['VoiceId']
         )
         logger.info(response)
 
-        task = {
-            k: str(v) if isinstance(v, datetime) else v
-            for k, v in response.get('SynthesisTask', {}).items()
-        }
-
-        message.update(Task=task, Status='Processing')
+        message.update(Status='PROCESSING', TaskId=response['TaskId'])
         messages.put_item(Item=message)
         logger.info(message)
 

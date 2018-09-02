@@ -14,6 +14,8 @@ Parameters:
     Type: String
   BucketName:
     Type: String
+  SnsTopicName:
+    Type: String
   DaysToExpire:
     Type: Number
     Default: 1
@@ -21,11 +23,11 @@ Parameters:
 Globals:
   Function:
     Timeout: 3
+    MemorySize: 128
     Environment:
       Variables:
         TABLE_NAME: !Sub ${StageName}-${TableName}
         BUCKET_NAME: !Sub ${StageName}-${BucketName}
-        DAYS_TO_EXPIRE: !Ref DaysToExpire
 
 Resources:
   NewMessageExecutionRole:
@@ -103,6 +105,44 @@ Resources:
                 - 's3:PutObject'
               Resource:
                 - !Sub 'arn:aws:s3:::${StageName}-${BucketName}/*'
+            - Effect: Allow
+              Action:
+                - 'sns:Publish'
+              Resource:
+                - !Ref MessagesTopic
+  UpdateOutputFunctionExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${StageName}-update-output-lambda-execution
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal: {Service: [lambda.amazonaws.com]}
+          Action: ['sts:AssumeRole']
+      ManagedPolicyArns:
+      - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+      - PolicyName: UpdateOutputLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+              Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+            - Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:GetItem
+              Resource:
+                - !GetAtt MessagesTable.Arn
+            - Effect: Allow
+              Action:
+                - 's3:PutObject'
+                - 's3:GetObject'
+              Resource:
+                - !Sub 'arn:aws:s3:::${StageName}-${BucketName}/*'
 
   MessagesTable:
     Type: AWS::DynamoDB::Table
@@ -122,7 +162,7 @@ Resources:
       TimeToLiveSpecification:
         Enabled: true
         AttributeName: Expiration
-  
+
   MessagesBucket:
     Type: 'AWS::S3::Bucket'
     Properties:
@@ -131,6 +171,14 @@ Resources:
         Rules:
           - ExpirationInDays: !Ref DaysToExpire
             Status: Enabled
+
+  MessagesTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      TopicName: !Ref SnsTopicName
+      Subscription:
+        - Protocol: lambda
+          Endpoint: !GetAtt UpdateOutputFunction.Arn
 
   NewMessageFunction:
     Type: AWS::Serverless::Function
@@ -141,15 +189,18 @@ Resources:
       Runtime: python3.6
       Role: !GetAtt NewMessageExecutionRole.Arn
       Events:
-        NewMessage: 
-          Type: Api 
+        NewMessage:
+          Type: Api
           Properties:
               # this deploys to an Api under the stack name
               # SAM support for stages isn't that good yet
               # TODO: explicit API definition using swagger definition?
               Path: /new_message
               Method: post
-  
+      Environment:
+        Variables:
+          DAYS_TO_EXPIRE: !Ref DaysToExpire
+
   ConvertToAudioFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -165,6 +216,24 @@ Resources:
             Stream: !GetAtt MessagesTable.StreamArn
             StartingPosition: LATEST
             BatchSize: 100
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref MessagesTopic
+
+  UpdateOutputFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: !Sub ${StageName}-update-output
+      Handler: update_output.handler
+      Runtime: python3.6
+      Role: !GetAtt UpdateOutputFunctionExecutionRole.Arn
+      CodeUri: app/
+      Events:
+        SnsSubscription:
+          Type: SNS
+          Properties:
+            Topic:
+              Ref: MessagesTopic
 
 Outputs:
   NewPostApi:

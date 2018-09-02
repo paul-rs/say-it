@@ -38,7 +38,9 @@ def handler(event, context):
         )
 
     valid_sample_rates = supported_formats[output_format]
-    if not sample_rate and sample_rate not in valid_sample_rates:
+    sample_rate = sample_rate or min(valid_sample_rates)
+
+    if sample_rate not in valid_sample_rates:
         return create_response(
             headers, None,
             f"Invalid SampleRate '{sample_rate}'. \
@@ -60,7 +62,7 @@ def handler(event, context):
     # Create tracking record in DynamoDB
     record = {
         'Id': record_id,
-        'Status': 'Queued',
+        'Status': 'QUEUED',
         'Message': message,
         'OutputFormat': output_format,
         'SampleRate': sample_rate,

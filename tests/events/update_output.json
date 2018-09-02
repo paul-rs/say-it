@@ -1,0 +1,33 @@
+{
+    "Records": [
+        {
+            "EventSource": "aws:sns",
+            "EventVersion": "1.0",
+            "EventSubscriptionArn": "arn:aws:sns:us-east-1:540054992609:say-it-messages:09717730-1ba3-4f79-a95c-ccd8c8c45824",
+            "Sns": {
+                "Type": "Notification",
+                "MessageId": "0ee6d3b5-45ed-5602-98b1-87b074a08a46",
+                "TopicArn": "arn:aws:sns:us-east-1:540054992609:say-it-messages",
+                "Subject": "SynthesisTaskNotification { TaskId: b8644192-0c20-4171-8952-d7746beb9aaa, Status: COMPLETED }",
+                "Message": {
+                    "taskId": "b8644192-0c20-4171-8952-d7746beb9aaa",
+                    "taskStatus": "COMPLETED",
+                    "outputUri": "",
+                    "creationTime": "2018-09-02T00:29:55.443Z",
+                    "requestCharacters": 55,
+                    "snsTopicArn": "arn:aws:sns:us-east-1:540054992609:say-it-messages",
+                    "outputFormat": "Mp3",
+                    "sampleRate": "16000",
+                    "textType": "Text",
+                    "voiceId": "Matthew"
+                },
+                "Timestamp": "2018-09-02T00:30:05.781Z",
+                "SignatureVersion": "1",
+                "Signature": "pavITzmbhhAmyIEFxcjPt5UBrCPBjKiiz+f+W1H3n9hHR2HTEPM9Ure8DWzdfrM+9fHYNavvO3hAPXAay/LVJ9Zr9mPE0o/4e63kyOqZlsYHxwkyhLHoGr76D1dBMg78pBufifeVUFkMkgklJ9KPZdVXAvLrj+dnb9HMViNJUtybiXRdDvQrQNfidbaASyqTTnkhh4+VKas1fCSGnzQ+1cx/f9jNku/njI4PPQ0vGw5V2ElvGbY9pC8WxN+ouJ+8ZfOcVrIjs8P87LCb6t/ePon/Fpp8xzdj0CBlgdFs3IX58O0gwVn3RELaguBZEuAfvDFeEmOolvvTO+veLWnPqw==",
+                "SigningCertUrl": "https://sns.us-east-1.amazonaws.com/SimpleNotificationService-eaea6120e66ea12e88dcd8bcbddca752.pem",
+                "UnsubscribeUrl": "https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-east-1:540054992609:say-it-messages:09717730-1ba3-4f79-a95c-ccd8c8c45824",
+                "MessageAttributes": {}
+            }
+        }
+    ]
+}
